@@ -1,0 +1,85 @@
+<div class="app-shell">
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
+    <!-- Brand -->
+    <div class="sidebar-brand">
+      <div class="brand-icon">✈️</div>
+      <div class="brand-text">
+        <h3>Wattu-Assaman</h3>
+        <p>Traffic Control</p>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <div *ngFor="let item of navItems" class="nav-item">
+        <a
+          class="nav-link"
+          [class.active]="currentPage === item.page"
+          (click)="navigateTo(item.route, item.page)"
+          [title]="item.label"
+        >
+          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-label">{{ item.label }}</span>
+        </a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ========== MAIN CONTENT ========== -->
+  <div class="app-container" [class.collapsed]="sidebarCollapsed">
+    <!-- Topbar -->
+    <nav class="topbar" [class.collapsed]="sidebarCollapsed">
+      <div class="topbar-content">
+        <div class="topbar-title">
+          <h2>{{ pageTitle }}</h2>
+          <p>{{ pageSubtitle }}</p>
+        </div>
+
+        <div class="topbar-actions">
+          <!-- Sidebar Toggle -->
+          <button
+            class="topbar-icon-btn"
+            (click)="toggleSidebar()"
+            title="Toggle sidebar"
+            aria-label="Toggle sidebar"
+          >
+            <span *ngIf="!sidebarCollapsed">←</span>
+            <span *ngIf="sidebarCollapsed">→</span>
+          </button>
+
+          <!-- Theme Toggle -->
+          <button
+            class="topbar-icon-btn"
+            (click)="toggleTheme()"
+            title="Toggle theme"
+            aria-label="Toggle theme"
+          >
+            🌙
+          </button>
+
+          <!-- Notifications -->
+          <button class="topbar-icon-btn" title="Notifications" aria-label="Notifications">
+            🔔
+          </button>
+
+          <!-- User Profile -->
+          <div class="user-profile">
+            <div class="avatar">{{ userInitials }}</div>
+            <div class="profile-info">
+              <span class="profile-name">{{ userName }}</span>
+              <span class="profile-role">{{ userRole }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Page Content -->
+    <main class="main-content" [class.collapsed]="sidebarCollapsed">
+      <div class="page-content">
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+  </div>
+</div>

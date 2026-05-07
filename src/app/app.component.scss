@@ -1,0 +1,9 @@
+// App component styles are defined in global styles.scss
+// This file is reserved for component-specific overrides if needed
+
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
