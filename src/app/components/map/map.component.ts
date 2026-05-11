@@ -42,9 +42,9 @@ export class DashboardMapComponent implements OnInit {
   private updateMarker(aircraft: any) {
     if (this.markers.has(aircraft.id)) {
       const marker = this.markers.get(aircraft.id)!;
-      marker.setLatLng([aircraft.lat, aircraft.lon]);
+      marker.setLatLng([aircraft.latitude, aircraft.longitude]);
     } else {
-      const marker = L.marker([aircraft.lat, aircraft.lon], {
+      const marker = L.marker([aircraft.latitude, aircraft.longitude], {
         icon: L.icon({
           iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
           iconSize: [25, 41],

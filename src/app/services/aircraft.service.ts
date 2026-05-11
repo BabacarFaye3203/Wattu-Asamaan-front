@@ -1,180 +1,268 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, combineLatest, interval, map, of, shareReplay, startWith, take, tap } from 'rxjs';
-import { Aircraft, AircraftAlert, TrafficCountry, TrafficStats } from '../models/aircraft.model';
+import { BehaviorSubject, map, shareReplay } from 'rxjs';
+import {
+  Aircraft,
+  AircraftAlert,
+  TrafficCountry,
+  TrafficStats
+} from '../models/aircraft.model';
+import { HttpClient } from '@angular/common/http';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class AircraftService {
-  private readonly alertSpeedThreshold = 760;
+private activeAlertsSubject = new BehaviorSubject<number>(0);
 
-  private readonly mockAircraft: Aircraft[] = [
-    {
-      id: 'AC-01',
-      callsign: 'VIR321',
-      country: 'France',
-      speed: 815,
-      altitude: 11300,
-      lat: 48.8566,
-      lon: 2.3522,
-      status: 'En route',
-      lastSeen: 'maintenant'
-    },
-    {
-      id: 'AC-02',
-      callsign: 'SKY128',
-      country: 'États-Unis',
-      speed: 728,
-      altitude: 9800,
-      lat: 40.7128,
-      lon: -74.006,
-      status: 'Stabilisé',
-      lastSeen: '30s'
-    },
-    {
-      id: 'AC-03',
-      callsign: 'LX987',
-      country: 'Suisse',
-      speed: 780,
-      altitude: 11600,
-      lat: 46.948,
-      lon: 7.4474,
-      status: 'Croisière',
-      lastSeen: '15s'
-    },
-    {
-      id: 'AC-04',
-      callsign: 'BAW394',
-      country: 'Royaume-Uni',
-      speed: 665,
-      altitude: 10200,
-      lat: 51.470,
-      lon: -0.4543,
-      status: 'Approche',
-      lastSeen: '40s'
-    },
-    {
-      id: 'AC-05',
-      callsign: 'AFR702',
-      country: 'France',
-      speed: 798,
-      altitude: 12100,
-      lat: 43.6045,
-      lon: 1.444,
-      status: 'En route',
-      lastSeen: '12s'
-    }
-  ];
+public activeAlerts$ = this.activeAlertsSubject.asObservable();
+  // =========================
+  //  STATE
+  // =========================
 
-  private readonly aircraftSubject = new BehaviorSubject<Aircraft[]>(this.mockAircraft);
-  private readonly alertsSubject = new BehaviorSubject<AircraftAlert[]>(this.buildAlerts(this.mockAircraft));
-  private readonly trafficHistorySubject = new BehaviorSubject<number[]>(this.buildHistory(this.mockAircraft.length));
+  private aircraftSubject = new BehaviorSubject<Aircraft[]>([]);
+  private alertsSubject = new BehaviorSubject<AircraftAlert[]>([]);
+  private trafficHistorySubject = new BehaviorSubject<number[]>([0]);
 
-  public readonly aircraft$ = this.aircraftSubject.asObservable();
-  public readonly alerts$ = this.alertsSubject.asObservable();
-  public readonly trafficHistory$ = this.trafficHistorySubject.asObservable();
-  public readonly trafficByCountry$ = this.aircraft$.pipe(
+  //  STATS SUBJECT
+  private statsSubject = new BehaviorSubject<TrafficStats>({
+    aircraftCount: 0,
+    averageSpeed: 0,
+    alertCount: 0
+  });
+
+  public aircraft$ = this.aircraftSubject.asObservable();
+  public alerts$ = this.alertsSubject.asObservable();
+  public trafficHistory$ = this.trafficHistorySubject.asObservable();
+
+  //  DASHBOARD STATS
+  public stats$ = this.statsSubject.asObservable();
+
+  //  COUNTRY ANALYTICS
+  public trafficByCountry$ = this.aircraft$.pipe(
     map((aircraft) => this.buildCountryTraffic(aircraft)),
-    shareReplay({ bufferSize: 1, refCount: true })
-  );
-  public readonly stats$ = combineLatest([this.aircraft$, this.alerts$]).pipe(
-    map(([aircraft, alerts]) => this.buildStats(aircraft, alerts)),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay(1)
   );
 
-  constructor() {
-    this.startLiveUpdates();
-  }
+  // =========================
+  // 🔌 WEBSOCKET
+  // =========================
 
-  getAircraft() {
-    return of(this.aircraftSubject.value).pipe(take(1));
-  }
+  private stompClient!: Client;
 
-  getStats() {
-    return this.stats$.pipe(take(1));
-  }
+  constructor(private http: HttpClient) {
 
-  getAlerts() {
-    return this.alerts$.pipe(take(1));
-  }
+  this.loadInitialAlerts();
+
+  this.connectWebSocket();
+}
 
   connectWebSocket() {
-    // Simule une connexion WebSocket pour le flux temps réel.
-    return this.aircraft$;
-  }
 
-  startLiveUpdates() {
-    interval(3000)
-      .pipe(
-        startWith(0),
-        tap(() => this.refreshMockTraffic())
-      )
-      .subscribe();
-  }
-
-  private refreshMockTraffic() {
-    const updatedAircraft = this.aircraftSubject.value.map((aircraft) => {
-      const speedVariation = Math.round((Math.random() - 0.45) * 40);
-      const altitudeVariation = Math.round((Math.random() - 0.5) * 260);
-      const latVariation = (Math.random() - 0.5) * 0.35;
-      const lonVariation = (Math.random() - 0.5) * 0.35;
-
-      return {
-        ...aircraft,
-        speed: Math.max(620, Math.min(840, aircraft.speed + speedVariation)),
-        altitude: Math.max(8800, Math.min(12800, aircraft.altitude + altitudeVariation)),
-        lat: aircraft.lat + latVariation,
-        lon: aircraft.lon + lonVariation,
-        lastSeen: 'maintenant'
-      };
+    this.stompClient = new Client({
+      webSocketFactory: () => new SockJS('http://localhost:8084/ws'),
+      reconnectDelay: 3000,
+      debug: (msg) => console.log('[WS]', msg)
     });
 
-    this.aircraftSubject.next(updatedAircraft);
-    this.alertsSubject.next(this.buildAlerts(updatedAircraft));
-    this.trafficHistorySubject.next(this.rollHistory(updatedAircraft.length));
-  }
+    this.stompClient.onConnect = () => {
 
-  private buildAlerts(aircraft: Aircraft[]) {
-    return aircraft
-      .filter((plane) => plane.speed > this.alertSpeedThreshold)
-      .map((plane) => ({
-        id: plane.id,
-        callsign: plane.callsign,
-        speed: plane.speed,
-        altitude: plane.altitude,
-        reason: 'Vitesse supérieure au seuil de sécurité',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }));
-  }
+      console.log('✅ WebSocket connecté');
 
-  private buildStats(aircraft: Aircraft[], alerts: AircraftAlert[]): TrafficStats {
-    const aircraftCount = aircraft.length;
-    const averageSpeed = aircraftCount
-      ? Math.round(aircraft.reduce((sum, item) => sum + item.speed, 0) / aircraftCount)
-      : 0;
+      // =========================
+      //  AIRCRAFT STREAM
+      // =========================
+      this.stompClient.subscribe('/topic/processed', (message) => {
 
-    return {
-      aircraftCount,
-      averageSpeed,
-      alertCount: alerts.length
+        const aircraft: Aircraft = JSON.parse(message.body);
+
+        console.log('✈️ AIRCRAFT RECEIVED:', aircraft);
+
+        this.updateAircraft(aircraft);
+      });
+
+      // =========================
+      //  ALERT STREAM
+      // =========================
+      this.stompClient.subscribe('/topic/alerts', (message) => {
+
+        const alert: AircraftAlert = JSON.parse(message.body);
+
+        console.log(' ALERT RECEIVED:', alert);
+
+        this.updateAlert(alert);
+      });
+
+      // =========================
+      //  STATS STREAM
+      // =========================
+      this.stompClient.subscribe('/topic/stats', (message) => {
+
+        const stats = JSON.parse(message.body);
+
+        console.log('📊 STATS RECEIVED:', stats);
+
+        //  UPDATE DASHBOARD DIRECTEMENT
+        const activeAlerts = stats.activeAlerts ?? 0;
+
+      this.activeAlertsSubject.next(activeAlerts);
+
+      this.statsSubject.next({
+        aircraftCount: stats.totalAircrafts ?? 0,
+        averageSpeed: Math.round(stats.averageSpeed ?? 0),
+        alertCount: activeAlerts
+      });
+
+      });
+
     };
+
+    this.stompClient.activate();
   }
 
-  private buildCountryTraffic(aircraft: Aircraft[]): TrafficCountry[] {
-    const counts = aircraft.reduce<Record<string, number>>((acc, item) => {
-      acc[item.country] = (acc[item.country] || 0) + 1;
-      return acc;
-    }, {});
+  private loadInitialAlerts() {
 
-    return Object.entries(counts)
-      .map(([country, count]) => ({ country, count }))
+  this.http
+    .get<AircraftAlert[]>('http://localhost:8084/all-allerts')
+    .subscribe({
+
+      next: (alerts) => {
+
+        console.log('✅ ALERTS LOADED:', alerts.length);
+
+        this.alertsSubject.next(alerts);
+      },
+
+      error: (err) => {
+
+        console.error('❌ Error loading alerts:', err);
+      }
+
+    });
+}
+
+  // =========================
+  //  UPDATE AIRCRAFT
+  // =========================
+
+  private updateAircraft(aircraft: any) {
+
+    //  BACKEND ENVOIE latitude/longitude
+    if (
+      !aircraft ||
+      aircraft.latitude == null ||
+      aircraft.longitude == null
+    ) {
+      console.warn('❌ Invalid aircraft ignored:', aircraft);
+      return;
+    }
+
+    //  MAPPING BACKEND → FRONT
+    const mappedAircraft: Aircraft = {
+      ...aircraft,
+      lat: aircraft.latitude,
+      lon: aircraft.longitude,
+      speed: aircraft.velocity ?? aircraft.speed ?? 0,
+      country: aircraft.originCountry ?? aircraft.country ?? 'Unknown'
+    };
+
+    const current = this.aircraftSubject.value;
+
+    const exists = current.find(a => a.id === mappedAircraft.id);
+
+    let updated: Aircraft[];
+
+    if (exists) {
+
+      updated = current.map(a =>
+        a.id === mappedAircraft.id ? mappedAircraft : a
+      );
+
+    } else {
+
+      updated = [...current, mappedAircraft];
+    }
+
+    this.aircraftSubject.next(updated);
+
+    this.trafficHistorySubject.next(
+      this.rollHistory(updated.length)
+    );
+
+    console.log(' AIRCRAFT COUNT:', updated.length);
+  }
+
+  // =========================
+  //  UPDATE ALERT
+  // =========================
+
+  private updateAlert(alert: AircraftAlert) {
+
+    if (!alert) return;
+
+    const current = this.alertsSubject.value;
+
+    const exists = current.find(a => a.id === alert.id);
+
+if (exists) {
+
+  const updated = current.map(a =>
+    a.id === alert.id ? alert : a
+  );
+
+  this.alertsSubject.next(updated);
+
+    } else {
+
+      this.alertsSubject.next([
+        alert,
+        ...current
+      ]);
+    }
+  }
+
+  // =========================
+  //  COUNTRY ANALYTICS
+  // =========================
+
+  private buildCountryTraffic(
+    aircraft: Aircraft[]
+  ): TrafficCountry[] {
+
+    const countryMap: Record<string, number> = {};
+
+    aircraft.forEach(a => {
+
+      const country = a.country || 'Unknown';
+
+      countryMap[country] = (countryMap[country] || 0) + 1;
+    });
+
+    return Object.entries(countryMap)
+      .map(([country, count]) => ({
+        country,
+        count
+      }))
       .sort((a, b) => b.count - a.count);
   }
 
-  private buildHistory(currentCount: number) {
-    return Array.from({ length: 10 }, (_, index) => Math.max(3, currentCount + index - 2));
+  // =========================
+  //  HISTORY
+  // =========================
+
+  private rollHistory(current: number) {
+
+    const prev = this.trafficHistorySubject.value.slice(-9);
+
+    return [...prev, current];
   }
 
-  private rollHistory(currentCount: number) {
-    const previous = this.trafficHistorySubject.value.slice(-9);
-    return [...previous, currentCount];
+  // =========================
+  // CLEANUP
+  // =========================
+
+  disconnect() {
+    this.stompClient.deactivate();
   }
 }

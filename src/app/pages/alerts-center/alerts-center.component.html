@@ -1,12 +1,14 @@
 <div class="alerts-center-page">
-  <!-- Header -->
+
+  <!-- HEADER -->
   <div class="page-header mb-4">
     <h2>Centre d'alertes</h2>
     <p>Gestion centralisée des anomalies et incidents</p>
   </div>
 
-  <!-- Filters -->
+  <!-- FILTERS -->
   <div class="filters-bar mb-4">
+
     <div class="filter-group">
       <button
         *ngFor="let filter of filters"
@@ -17,32 +19,55 @@
         {{ filter.label }}
       </button>
     </div>
+
+    <!--  TOTAL ALERTES BACKEND -->
     <div class="filter-info">
-      <span class="badge badge-info">{{ (alerts$ | async)?.length || 0 }} alerte(s)</span>
+      <span class="badge badge-info">
+         {{ (activeAlertsCount$ | async) || 0 }} alerte(s) active(s)
+      </span>
     </div>
+
   </div>
 
-  <!-- Alerts Container -->
+  <!-- ALERTS -->
   <div class="alerts-container">
+
     <div *ngIf="(alerts$ | async) as alerts">
-      <!-- Alerts List -->
-      <div *ngIf="alerts.length > 0; else noAlerts" class="alerts-grid">
+
+      <!--  LISTE ALERTES -->
+      <div
+        *ngIf="filteredAlerts(alerts).length > 0; else noAlerts"
+        class="alerts-grid"
+      >
+
         <div
-          *ngFor="let alert of alerts; let i = index"
+          *ngFor="let alert of filteredAlerts(alerts); let i = index"
           class="alert-card"
           [class.critical]="getAlertLevel(alert) === 'critical'"
           [class.warning]="getAlertLevel(alert) === 'warning'"
           [style.animation-delay]="(i * 0.05) + 's'"
         >
-          <!-- Alert Header -->
+
+          <!-- HEADER -->
           <div class="alert-header">
-            <div class="alert-icon" [class.critical]="getAlertLevel(alert) === 'critical'">
+
+            <div
+              class="alert-icon"
+              [class.critical]="getAlertLevel(alert) === 'critical'"
+            >
               {{ getAlertIcon(getAlertLevel(alert)) }}
             </div>
+
             <div class="alert-meta">
-              <h4 class="alert-title">{{ alert.callsign }}</h4>
-              <span class="alert-time">{{ alert.timestamp }}</span>
+              <h4 class="alert-title">
+                {{ alert.callsign || 'UNKNOWN' }}
+              </h4>
+
+              <span class="alert-time">
+                {{ alert.timestamp | date:'HH:mm:ss' }}
+              </span>
             </div>
+
             <div class="alert-actions">
               <button
                 class="btn-dismiss"
@@ -52,45 +77,80 @@
                 ✕
               </button>
             </div>
+
           </div>
 
-          <!-- Alert Body -->
+          <!-- BODY -->
           <div class="alert-body">
-            <p class="alert-reason">{{ alert.reason }}</p>
+
+            <p class="alert-reason">
+              {{ alert.reason || 'Alerte de surveillance détectée' }}
+            </p>
+
             <div class="alert-details">
+
               <div class="detail-row">
                 <span class="detail-label">Altitude :</span>
-                <span class="detail-value">{{ alert.altitude }} m</span>
+
+                <span class="detail-value">
+                  {{ alert.altitude || 0 }} m
+                </span>
               </div>
+
               <div class="detail-row">
                 <span class="detail-label">Vitesse :</span>
-                <span class="detail-value">{{ alert.speed }} km/h</span>
+
+                <span class="detail-value">
+                  {{ alert.speed || 0 }} km/h
+                </span>
               </div>
+
             </div>
+
           </div>
 
-          <!-- Alert Footer -->
+          <!-- FOOTER -->
           <div class="alert-footer">
+
             <span
               class="severity-badge"
               [class.critical]="getAlertLevel(alert) === 'critical'"
               [class.warning]="getAlertLevel(alert) === 'warning'"
             >
-              {{ getAlertLevel(alert) === 'critical' ? 'CRITIQUE' : 'AVERTISSEMENT' }}
+              {{
+                getAlertLevel(alert) === 'critical'
+                  ? 'CRITIQUE'
+                  : 'AVERTISSEMENT'
+              }}
             </span>
+
           </div>
+
         </div>
+
       </div>
 
-      <!-- Empty State -->
+      <!-- EMPTY -->
       <ng-template #noAlerts>
+
         <div class="empty-state">
+
           <div class="empty-icon">✓</div>
+
           <h3>Aucune alerte</h3>
+
           <p>Le système fonctionne normalement</p>
-          <p class="empty-subtitle">Toutes les fonctions sont optimales</p>
+
+          <p class="empty-subtitle">
+            Toutes les fonctions sont optimales
+          </p>
+
         </div>
+
       </ng-template>
+
     </div>
+
   </div>
+
 </div>

@@ -4,8 +4,8 @@ export interface Aircraft {
   country: string;
   speed: number;
   altitude: number;
-  lat: number;
-  lon: number;
+  latitude: number;
+  longitude: number;
   status: string;
   lastSeen: string;
 }

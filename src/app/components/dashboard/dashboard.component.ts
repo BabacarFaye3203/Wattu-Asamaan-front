@@ -1,10 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AircraftService } from '../../services/aircraft.service';
 import { DashboardMapComponent } from '../map/map.component';
 import { ChartsComponent } from '../charts/charts.component';
-import { Observable, map } from 'rxjs';
-import { TrafficStats, TrafficCountry } from '../../models/aircraft.model';
+import { map } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -13,19 +12,13 @@ import { TrafficStats, TrafficCountry } from '../../models/aircraft.model';
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
-export class DashboardComponent implements OnInit {
-  stats$: Observable<TrafficStats>;
-  topCountry$: Observable<TrafficCountry | null>;
+export class DashboardComponent {
 
-  constructor(private aircraftService: AircraftService) {
-    this.stats$ = this.aircraftService.stats$;
-    this.topCountry$ = this.aircraftService.trafficByCountry$.pipe(
-      map((countries) => (countries.length ? countries[0] : null))
-    );
-  }
+  stats$ = this.aircraftService.stats$;
 
-  ngOnInit() {
-    // Start live updates
-    this.aircraftService.startLiveUpdates();
-  }
+  topCountry$ = this.aircraftService.trafficByCountry$.pipe(
+    map(list => list?.length ? list[0] : { country: 'N/A', count: 0 })
+  );
+
+  constructor(private aircraftService: AircraftService) {}
 }

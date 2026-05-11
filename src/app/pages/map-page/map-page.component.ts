@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DashboardMapComponent } from '../../components/map/map.component';
 import { PageService } from '../../services/page.service';
+import L from 'leaflet';
 
 @Component({
   selector: 'app-map-page',
@@ -20,4 +21,12 @@ export class MapPageComponent implements OnInit {
       'Localisation des avions en temps réel'
     );
   }
+  
+  updateMarker(aircraft: any) {
+  if (!aircraft?.latitude || !aircraft?.longitude) {
+    return;
+  }
+
+  L.marker([aircraft.latitude, aircraft.longitude]);
+}
 }

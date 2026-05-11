@@ -22,6 +22,7 @@ export class AlertsCenterComponent implements OnInit {
     { label: 'Critiques', value: 'critical' },
     { label: 'Avertissements', value: 'warning' }
   ];
+  public activeAlertsCount$ = this.aircraftService.activeAlerts$;
 
   constructor(
     private aircraftService: AircraftService,
@@ -52,4 +53,17 @@ export class AlertsCenterComponent implements OnInit {
     // TODO: Implement alert dismissal
     console.log('Dismiss alert:', alertId);
   }
+  filteredAlerts(alerts: any[]) {
+
+  if (this.activeFilter === 'all') {
+    return alerts;
+  }
+
+  return alerts.filter(alert => {
+
+    const level = this.getAlertLevel(alert);
+
+    return level === this.activeFilter;
+  });
+}
 }

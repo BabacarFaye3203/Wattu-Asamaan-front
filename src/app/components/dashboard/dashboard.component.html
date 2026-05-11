@@ -1,66 +1,94 @@
 <div class="dashboard">
-  <div class="overview-panel">
-    <div class="overview-header">
-      <div class="overview-title">
-        <h2>Wattu-Assaman</h2>
-        <p>Tableau de bord de suivi du trafic aérien.</p>
+
+  <ng-container *ngIf="stats$ | async as stats">
+  <ng-container *ngIf="topCountry$ | async as topCountry">
+
+    <div class="overview-panel">
+
+      <div class="overview-header">
+        <div class="overview-title">
+          <h2>Wattu-Assaman</h2>
+          <p>Tableau de bord de suivi du trafic aérien en temps réel</p>
+        </div>
+
+        <div class="overview-status">
+          <span class="status-dot"></span>
+          En direct
+        </div>
       </div>
-      <div class="overview-status">
-        <span class="status-dot"></span>
-        En direct
+
+      <div class="grid grid-4 mb-4">
+
+        <!-- ✈️ AIRCRAFT -->
+        <div class="kpi-card">
+          <div class="kpi-icon">✈️</div>
+          <div class="kpi-label">Avions en vol</div>
+          <div class="kpi-value">{{ stats.aircraftCount }}</div>
+          <div class="kpi-change positive">Flux temps réel</div>
+        </div>
+
+        <!-- 📍 SPEED -->
+        <div class="kpi-card">
+          <div class="kpi-icon">📍</div>
+          <div class="kpi-label">Vitesse moyenne</div>
+          <div class="kpi-value">
+            {{ stats.averageSpeed }} <span class="unit">km/h</span>
+          </div>
+          <div class="kpi-change positive">Stream actif</div>
+        </div>
+
+        <!-- 🚨 ALERTS -->
+        <div class="kpi-card">
+          <div class="kpi-icon">🚨</div>
+          <div class="kpi-label">Alertes actives</div>
+          <div class="kpi-value">{{ stats.alertCount }}</div>
+          <div class="kpi-change negative">
+            Surveillance en cours
+          </div>
+        </div>
+
+        <!-- 🌍 TOP COUNTRY -->
+        <div class="kpi-card">
+          <div class="kpi-icon">🌍</div>
+          <div class="kpi-label">Pays le plus actif</div>
+          <div class="kpi-value">
+            {{ topCountry?.country || 'N/A' }}
+          </div>
+          <div class="kpi-change positive">
+            {{ topCountry?.count || 0 }} vols
+          </div>
+        </div>
+
       </div>
+
     </div>
 
-    <div class="grid grid-4 mb-4">
-      <div class="kpi-card">
-        <div class="kpi-icon">✈️</div>
-        <div class="kpi-label">Avions en vol</div>
-        <div class="kpi-value">{{ (stats$ | async)?.aircraftCount || 0 }}</div>
-        <div class="kpi-change positive">Flux stable</div>
+    <!-- 📊 VISUALS -->
+    <div class="grid grid-2 gap-4">
+
+      <div class="card summary-card">
+        <div class="card-header">
+          <h4 class="card-title">Trafic en temps réel</h4>
+          <p class="card-subtitle">Flux aérien live (Kafka → WebSocket)</p>
+        </div>
+        <div class="card-body">
+          <app-charts></app-charts>
+        </div>
       </div>
 
-      <div class="kpi-card">
-        <div class="kpi-icon">📍</div>
-        <div class="kpi-label">Vitesse moyenne</div>
-        <div class="kpi-value">{{ (stats$ | async)?.averageSpeed || 0 }}<span class="unit">km/h</span></div>
-        <div class="kpi-change positive">En hausse</div>
+      <div class="card summary-card">
+        <div class="card-header">
+          <h4 class="card-title">Positions des avions</h4>
+          <p class="card-subtitle">Tracking GPS en direct</p>
+        </div>
+        <div class="card-body p-0">
+          <app-dashboard-map></app-dashboard-map>
+        </div>
       </div>
 
-      <div class="kpi-card">
-        <div class="kpi-icon">🚨</div>
-        <div class="kpi-label">Alertes actives</div>
-        <div class="kpi-value">{{ (stats$ | async)?.alertCount || 0 }}</div>
-        <div class="kpi-change negative">Analyse requise</div>
-      </div>
-
-      <div class="kpi-card">
-        <div class="kpi-icon">🌍</div>
-        <div class="kpi-label">Pays le plus actif</div>
-        <div class="kpi-value">{{ (topCountry$ | async)?.country || 'Aucun' }}</div>
-        <div class="kpi-change positive">{{ (topCountry$ | async)?.count || 0 }} avions</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid grid-2 gap-4">
-    <div class="card summary-card">
-      <div class="card-header">
-        <h4 class="card-title">Trafic en temps réel</h4>
-        <p class="card-subtitle">Historique synthétique des vols</p>
-      </div>
-      <div class="card-body">
-        <app-charts></app-charts>
-      </div>
     </div>
 
-    <div class="card summary-card">
-      <div class="card-header">
-        <h4 class="card-title">Couverture</h4>
-        <p class="card-subtitle">Positions des avions suivies</p>
-      </div>
-      <div class="card-body p-0">
-        <app-dashboard-map></app-dashboard-map>
-      </div>
-    </div>
-  </div>
+  </ng-container>
+  </ng-container>
+
 </div>
